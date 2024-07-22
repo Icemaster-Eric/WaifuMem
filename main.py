@@ -2,7 +2,6 @@ from waifumem import WaifuMem, Conversation
 
 
 def main():
-    waifumem = WaifuMem()
     conversation = Conversation()
 
     conversation.add_message("hey", "User A", 1)
@@ -23,7 +22,7 @@ def main():
     conversation.add_message("unfriending you rn", "User A", 16)
     conversation.add_message("nah bro you ain't my friend anymore", "User C", 17)
 
-    waifumem.remember(conversation)
+    waifumem = WaifuMem([conversation])
 
 
 if __name__ == "__main__":

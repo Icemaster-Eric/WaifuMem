@@ -17,7 +17,7 @@ class Conversation:
         })
 
     def cut(self, ratio: float = 0.5) -> Conversation:
-        """Cuts the `.messages` list by the ratio and saves the latter slice while returning a Conversation object with the former slice of the `.messages` list.
+        """Cuts the `.messages` list by the ratio and returns a Conversation object with the former slice of the `.messages` list.
 
         Args:
             ratio (float, optional): The ratio to cut the `.messages` list. Defaults to 0.5.
