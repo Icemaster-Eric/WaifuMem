@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+#from sentence_transformers import SentenceTransformer
 from waifumem.memory import Memory
 from waifumem.conversation import Conversation
 
