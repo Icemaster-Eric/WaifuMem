@@ -8,7 +8,7 @@ class Memory:
 
 class MessageMemory(Memory):
     """
-    some desc here
+    some message stuff idk
     """
     def __init__(self):
         super().__init__()
@@ -25,7 +25,7 @@ class ChatMemory(Memory):
 
 class UserMemory(Memory):
     """
-    some desc here
+    List of chat memories? idk if this organization is even helpful or not
     """
     def __init__(self):
         super().__init__()
