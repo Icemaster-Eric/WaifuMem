@@ -9,12 +9,28 @@ class Conversation:
         self.id = uuid4().hex
         self.messages = messages or []
 
+        self.cluster_messages()
+
     def add_message(self, message: str, user: str, timestamp: float | None):
         self.messages.append({
             "message": message,
             "user": user,
             "timestamp": timestamp or time.time()
         })
+        self.cluster_messages()
+
+    def cluster_messages(self):
+        for i, message in enumerate(self.messages):
+            if i == 0:
+                continue
+
+            if message["user"] == self.messages[i - 1]["user"]:
+                if message["timestamp"] - self.messages[i - 1]["timestamp"] > 120:
+                    continue
+
+                self.messages[i - 1]["message"] += "\n" + message["message"]
+                self.messages[i - 1]["timestamp"] = message["timestamp"]
+                self.messages.remove(message)
 
     def cut(self, ratio: float = 0.5) -> Conversation:
         """Cuts the `.messages` list by the ratio and returns a Conversation object with the former slice of the `.messages` list.
@@ -31,3 +47,6 @@ class Conversation:
         self.messages = self.messages[split:]
 
         return conversation
+
+    def get_text(self):
+        return "\n".join(f"{message['user']}: {message['message']}" for message in self.messages)

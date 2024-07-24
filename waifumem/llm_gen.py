@@ -1,8 +1,8 @@
 from llama_cpp import Llama
 llm = Llama(
-      model_path="waifumem/models/gemma-2-27b-it-Q5_K_L.gguf",
-      chat_format="gemma",
-      n_gpu_layers=-1
+    model_path="waifumem/models/gemma-2-27b-it-Q5_K_L.gguf",
+    chat_format="gemma",
+    n_gpu_layers=-1
 )
 for token in llm.create_chat_completion(
     messages = [
