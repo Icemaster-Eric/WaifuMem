@@ -6,6 +6,11 @@ from copy import deepcopy
 
 class Conversation:
     def __init__(self, messages: list[dict] | None = None):
+        """Creates a conversation object
+
+        Args:
+            messages (list[dict] | None, optional): List of message objects with message (str), user (str) and timestamp (int, epoch seconds) keys. Defaults to None.
+        """
         self.id = uuid4().hex
         self.messages = messages or []
 
