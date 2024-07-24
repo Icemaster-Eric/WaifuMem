@@ -24,6 +24,10 @@ def main():
 
     waifumem = WaifuMem([conversation])
 
+    print(waifumem.summaries)
+
+    print(waifumem.search("Who got a girlfriend?"))
+
 
 if __name__ == "__main__":
     main()

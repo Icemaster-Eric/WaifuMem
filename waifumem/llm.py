@@ -4,7 +4,7 @@ from llama_cpp import Llama
 llm = Llama(
     model_path="waifumem/models/gemma-2-27b-it-Q5_K_L.gguf",
     chat_format="gemma",
-    n_gpu_layers=-1
+    n_gpu_layers=40
 )
 
 
@@ -20,3 +20,7 @@ def summarize(text: str) -> str:
     return llm.create_chat_completion([
         {"role": "user", "content": f"You are a smart AI that summarizes conversations efficiently. Summarize the following conversation:\n{text}"}
     ])["choices"][0]["message"]["content"]
+
+
+if __name__ == "__main__":
+    summarize("hello world")
