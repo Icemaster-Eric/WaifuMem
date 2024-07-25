@@ -2,13 +2,10 @@ from typing import Literal
 import pickle
 import lzma
 from tqdm import tqdm
-from numpy import concatenate
-#from torch import set_default_device; set_default_device("cuda")
+from torch import set_default_device; set_default_device("cuda")
 from sentence_transformers.util import semantic_search
 from models import llm_model, embedding_model
-from waifumem.memory import Memory
 from waifumem.conversation import Conversation
-
 
 
 def get_summary(text: str) -> str:
@@ -39,13 +36,18 @@ def get_topics(text: str) -> str:
     ], temperature=0.3, stop="\n")["choices"][0]["message"]["content"]
 
 
+class Knowledge: # stores knowledge of the model? unsure rn
+    def __init__(self):
+        pass
+
+
 class WaifuMem:
     def __init__(self, conversations: list[Conversation] = []):
         self.conversations = conversations
         self.summaries = []
-        self.summary_embeddings = None
+        self.summary_embeddings = []
         self.topics = []
-        self.topic_embeddings = None
+        self.topic_embeddings = []
 
         for conversation in tqdm(conversations, desc="Generating memory"):
             self.remember(conversation)
@@ -55,25 +57,15 @@ class WaifuMem:
         summary = get_summary(conversation.get_text())
         self.summaries.append(summary)
         # embed conversation
-        summary_embeddings = embedding_model.encode([summary])
-
-        if self.summary_embeddings is None:
-            self.summary_embeddings = summary_embeddings
-        else:
-            self.summary_embeddings = concatenate([self.summary_embeddings, summary_embeddings])
+        self.summary_embeddings.append(embedding_model.encode(summary, convert_to_tensor=True))
 
         # get topics of conversation
         topics = get_topics(conversation.get_text())
         self.topics.append(topics)
         # embed conversation
-        topic_embeddings = embedding_model.encode([topics])
+        self.topic_embeddings.append(embedding_model.encode(topics, convert_to_tensor=True))
 
-        if self.topic_embeddings is None:
-            self.topic_embeddings = topic_embeddings
-        else:
-            self.topic_embeddings = concatenate([self.summary_embeddings, topic_embeddings])
-
-    def search_conversation(self, message, conversation_id: str) -> list[dict[Literal["message", "user", "timestamp"], str | float]]:
+    def search_conversation(self, message_embedding, conversation_id: str) -> list[dict[Literal["message", "user", "timestamp"], str | float]]:
         """Semantically searches for relevant messages in a Conversation
 
         Args:
@@ -84,9 +76,12 @@ class WaifuMem:
         """
         conversation = next(conv for conv in self.conversations if conv.id == conversation_id)
 
-        pass
+        results = semantic_search(message_embedding, conversation.message_embeddings)[0]
 
-    def search_memories(self):
+        return [conversation.messages[result["corpus_id"]] for result in results]
+
+    def search_messages(self):
+        # search all messages in all conversations
         pass
 
     def search_knowledge(self):
@@ -95,7 +90,16 @@ class WaifuMem:
     def search(self, text: str):
         query = embedding_model.encode(text, prompt_name="query")
 
-        return semantic_search(query, self.summary_embeddings)
+        # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)
+        summary_results = semantic_search(query, self.summary_embeddings)[0]
+        # find relevant conversations by topics (adjust to similarity search based on current conversation's topics?)
+        topic_results = semantic_search(query, self.topic_embeddings)[0]
+
+        # create list of conversations
+        for i in [result["corpus_id"] for result in summary_results + topic_results]:
+            conversation = self.conversations[i]
+
+            yield self.search_conversation(query, conversation.id)
 
     def save(self, path: str):
         with lzma.open(path, "wb") as f:
