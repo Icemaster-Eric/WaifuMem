@@ -157,3 +157,4 @@ cython_debug/
 # Project-specific stuff
 waifumem/models/*
 waifumem/data/*
+*.xz

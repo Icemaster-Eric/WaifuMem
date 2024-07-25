@@ -1,3 +1,4 @@
+import json
 from waifumem import WaifuMem, Conversation
 
 
@@ -9,15 +10,20 @@ def main():
                 "user": m[1:m.find("]: ")],
                 "timestamp": int(m.split()[-1]),
             } for m in f.readlines()
-        ][:60]
-    
+        ]
+
     conversations = [Conversation(m) for m in zip(*[iter(messages)]*20)]
 
     waifumem = WaifuMem(conversations)
 
-    print(waifumem.summaries)
+    with open("summaries.json", "w") as f:
+        json.dump(waifumem.summaries, f)
+    with open("topics.json", "w") as f:
+        json.dump(waifumem.topics, f)
 
-    print(waifumem.search("Best nahida teams"))
+    print(waifumem.search("Best healer"))
+
+    waifumem.save("mem.xz")
 
 
 if __name__ == "__main__":

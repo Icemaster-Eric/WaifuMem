@@ -1,4 +1,3 @@
-from __future__ import annotations
 import time
 from uuid import uuid4
 from copy import deepcopy
@@ -37,7 +36,7 @@ class Conversation:
                 self.messages[i - 1]["timestamp"] = message["timestamp"]
                 self.messages.remove(message)
 
-    def cut(self, ratio: float = 0.5) -> Conversation:
+    def cut(self, ratio: float = 0.5) -> "Conversation":
         """Cuts the `.messages` list by the ratio and returns a Conversation object with the former slice of the `.messages` list.
 
         Args:
