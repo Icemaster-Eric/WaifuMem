@@ -1,10 +1,11 @@
+from typing import Literal
 import time
 from uuid import uuid4
 from copy import deepcopy
 
 
 class Conversation:
-    def __init__(self, messages: list[dict] | None = None):
+    def __init__(self, messages: list[dict[Literal["message", "user", "timestamp"], str | float]] | None = None):
         """Creates a conversation object
 
         Args:

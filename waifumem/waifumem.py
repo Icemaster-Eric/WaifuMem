@@ -1,24 +1,14 @@
+from typing import Literal
 import pickle
 import lzma
 from tqdm import tqdm
 from numpy import concatenate
 #from torch import set_default_device; set_default_device("cuda")
-from llama_cpp import Llama
-from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import semantic_search
+from models import llm_model, embedding_model
 from waifumem.memory import Memory
 from waifumem.conversation import Conversation
 
-
-llm_model = Llama(
-    model_path="waifumem/models/gemma-2-27b-it-Q5_K_L.gguf",
-    chat_format="gemma",
-    n_ctx=8192,
-    n_gpu_layers=-1,
-    use_mmap=False,
-    verbose=False
-)
-embedding_model = SentenceTransformer("Snowflake/snowflake-arctic-embed-l")
 
 
 def get_summary(text: str) -> str:
@@ -52,7 +42,6 @@ def get_topics(text: str) -> str:
 class WaifuMem:
     def __init__(self, conversations: list[Conversation] = []):
         self.conversations = conversations
-        self.memories = []
         self.summaries = []
         self.summary_embeddings = None
         self.topics = []
@@ -62,13 +51,6 @@ class WaifuMem:
             self.remember(conversation)
 
     def remember(self, conversation: Conversation):
-        for message in conversation.messages:
-            # calculate whether the message is fit to become a memory or not (importance)
-            # I should probably use a finetuned distilbert model for this
-            # 0 = unfit, 1 = slightly important, 2 = important
-            importance = 1
-            self.memories.append(Memory(message, importance))
-
         # summarize conversation
         summary = get_summary(conversation.get_text())
         self.summaries.append(summary)
@@ -90,6 +72,25 @@ class WaifuMem:
             self.topic_embeddings = topic_embeddings
         else:
             self.topic_embeddings = concatenate([self.summary_embeddings, topic_embeddings])
+
+    def search_conversation(self, message, conversation_id: str) -> list[dict[Literal["message", "user", "timestamp"], str | float]]:
+        """Semantically searches for relevant messages in a Conversation
+
+        Args:
+        conversation_id (str): `Conversation.id`
+
+        Returns:
+            list: messages from `Conversation.messages`
+        """
+        conversation = next(conv for conv in self.conversations if conv.id == conversation_id)
+
+        pass
+
+    def search_memories(self):
+        pass
+
+    def search_knowledge(self):
+        pass
 
     def search(self, text: str):
         query = embedding_model.encode(text, prompt_name="query")

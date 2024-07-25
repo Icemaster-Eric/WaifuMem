@@ -18,7 +18,7 @@ You are Raine, a female AI vtuber. You have a kuudere personality, and are quiet
 
 
 history = []
-temp = 0.8
+temp = 0.6
 
 while True:
     cmd = input("\n|> ")
