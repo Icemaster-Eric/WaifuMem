@@ -2,8 +2,7 @@ from typing import Literal
 import time
 from uuid import uuid4
 from copy import deepcopy
-from models import embedding_model
-from utils import message_to_text
+from waifumem.models import embedding_model
 
 
 class Conversation:
@@ -31,7 +30,7 @@ class Conversation:
 
         if self.messages:
             self.message_embeddings = embedding_model.encode([
-                message_to_text(message) for message in self.messages
+                f"{message['user']}: {message['message']}" for message in self.messages # convert timestamp to human-readable format and include here later (?)
             ], convert_to_tensor=True)
         else:
             self.message_embeddings = []

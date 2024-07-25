@@ -1,5 +1,5 @@
 from llama_cpp import Llama
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 
 llm_model = Llama(
@@ -11,3 +11,4 @@ llm_model = Llama(
     verbose=False
 )
 embedding_model = SentenceTransformer("Snowflake/snowflake-arctic-embed-l")
+reranking_model = CrossEncoder('model_name', max_length=512)

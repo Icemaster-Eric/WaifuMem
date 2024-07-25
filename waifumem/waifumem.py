@@ -4,7 +4,7 @@ import lzma
 from tqdm import tqdm
 from torch import set_default_device; set_default_device("cuda")
 from sentence_transformers.util import semantic_search
-from models import llm_model, embedding_model
+from waifumem.models import llm_model, embedding_model
 from waifumem.conversation import Conversation
 
 
@@ -42,12 +42,19 @@ class Knowledge: # stores knowledge of the model? unsure rn
 
 
 class WaifuMem:
-    def __init__(self, conversations: list[Conversation] = []):
+    def __init__(self, conversations: list[Conversation] = [], **kwargs):
         self.conversations = conversations
         self.summaries = []
         self.summary_embeddings = []
         self.topics = []
         self.topic_embeddings = []
+        self.settings = {
+            "min_conv_score": 0.25,
+            "min_msg_score": 0.3
+        }
+        for setting, value in kwargs.items():
+            if setting in self.settings:
+                self.settings[setting] = value
 
         for conversation in tqdm(conversations, desc="Generating memory"):
             self.remember(conversation)
@@ -78,7 +85,12 @@ class WaifuMem:
 
         results = semantic_search(message_embedding, conversation.message_embeddings)[0]
 
-        return [conversation.messages[result["corpus_id"]] for result in results]
+        return sorted([
+            (
+                conversation.messages[result["corpus_id"]],
+                result["score"]
+            ) for result in results if result["score"] > self.settings["min_msg_score"]
+        ], reverse=True, key=lambda x: x[1])
 
     def search_messages(self):
         # search all messages in all conversations
@@ -95,11 +107,26 @@ class WaifuMem:
         # find relevant conversations by topics (adjust to similarity search based on current conversation's topics?)
         topic_results = semantic_search(query, self.topic_embeddings)[0]
 
-        # create list of conversations
-        for i in [result["corpus_id"] for result in summary_results + topic_results]:
-            conversation = self.conversations[i]
+        conversation_ids = set([
+            (self.conversations[result["corpus_id"]].id, result["score"]) for result in summary_results
+        ] + [
+            (self.conversations[result["corpus_id"]].id, result["score"]) for result in topic_results
+        ])
 
-            yield self.search_conversation(query, conversation.id)
+        conversations = sorted([
+            conv for conv in conversation_ids if conv[1] > self.settings["min_conv_score"]
+        ], reverse=True, key=lambda x: x[1])
+
+        results = []
+
+        for conv_id, score in conversations:
+            conversation = next(conv for conv in self.conversations if conv.id == conv_id)
+
+            results.extend(self.search_conversation(query, conversation.id))
+
+        # re-rank results
+
+        return conversations
 
     def save(self, path: str):
         with lzma.open(path, "wb") as f:
