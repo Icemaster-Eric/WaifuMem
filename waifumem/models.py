@@ -10,5 +10,5 @@ llm_model = Llama(
     use_mmap=False,
     verbose=False
 )
-embedding_model = SentenceTransformer("Snowflake/snowflake-arctic-embed-l")
+embedding_model = SentenceTransformer("Snowflake/snowflake-arctic-embed-m-long")
 reranking_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")

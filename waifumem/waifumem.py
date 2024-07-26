@@ -77,7 +77,7 @@ class WaifuMem:
         self.topic_embeddings.append(embedding_model.encode(topics, convert_to_tensor=True))
 
     def search_conversation(self, message_embedding, conversation_id: str) -> list[tuple[dict[Literal["message", "user", "timestamp"], str | float], float]]:
-        """Semantically searches for relevant messages in a Conversation
+        """Semantically searches for relevant messages in a Conversation with large context searches
 
         Args:
         conversation_id (str): `Conversation.id`
@@ -103,13 +103,19 @@ class WaifuMem:
     def search_knowledge(self):
         pass
 
-    def search(self, text: str, top_k: int = 30):
+    def search(self, text: str, top_k: int = 30) -> list[tuple[dict[Literal["message", "user", "timestamp"], str | float], float]]:
+        if not self.conversations: # change this once I implement knowledge
+            return []
+
         query = embedding_model.encode(text, prompt_name="query")
 
-        # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)
-        summary_results = semantic_search(query, self.summary_embeddings)[0]
-        # find relevant conversations by topics (adjust to similarity search based on current conversation's topics?)
-        topic_results = semantic_search(query, self.topic_embeddings)[0]
+        if self.summary_embeddings:
+            # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)
+            summary_results = semantic_search(query, self.summary_embeddings)[0]
+
+        if self.topic_embeddings:
+            # find relevant conversations by topics (adjust to similarity search based on current conversation's topics?)
+            topic_results = semantic_search(query, self.topic_embeddings)[0]
 
         combined_results = [
             (self.conversations[result["corpus_id"]].id, result["score"]) for result in summary_results
@@ -148,7 +154,7 @@ class WaifuMem:
 
     def save(self, path: str):
         with lzma.open(path, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def load(path: str) -> "WaifuMem":

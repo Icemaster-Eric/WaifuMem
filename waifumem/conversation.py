@@ -29,13 +29,23 @@ class Conversation:
                 self.messages[i - 1]["message"] += "\n" + message["message"]
                 self.messages[i - 1]["timestamp"] = message["timestamp"]
                 self.messages.remove(message)
+        
+        self.message_embeddings = []
+        self.message_ctx_embeddings = [] # 3 messages embedded at once
 
         if self.messages:
             self.message_embeddings = embedding_model.encode([
                 f"{message['user']}: {message['message']}" for message in self.messages # convert timestamp to human-readable format and include here later (?)
             ], convert_to_tensor=True)
-        else:
-            self.message_embeddings = []
+
+            for i, message in enumerate(self.messages):
+                # horrifyingly disgusting code, but I think it works
+                if i == 0:
+                    self.message_ctx_embeddings.append(f"{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
+                elif i - 1 == len(self.messages):
+                    self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}")
+                else:
+                    self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
 
     def add_message(self, message: str, user: str, timestamp: float | None = None):
         # cluster message
@@ -65,8 +75,12 @@ class Conversation:
         """
         conversation = deepcopy(self)
         split = int(len(self.messages) * ratio)
+
         conversation.messages = self.messages[:split]
+        conversation.message_embeddings = self.message_embeddings[:split]
+
         self.messages = self.messages[split:]
+        self.message_embeddings = self.message_embeddings[split:]
 
         return conversation
 

@@ -158,3 +158,4 @@ cython_debug/
 waifumem/models/*
 waifumem/data/*
 *.xz
+chat_history.json
