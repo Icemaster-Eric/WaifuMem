@@ -6,7 +6,7 @@ from waifumem.models import embedding_model
 
 
 class Conversation:
-    def __init__(self, messages: list[dict[Literal["message", "user", "timestamp"], str | float]] = []):
+    def __init__(self, messages: list[dict[Literal["message", "user", "timestamp"], str | float]] = [], summary: str | None = None, topics: str | None = None):
         """Creates a conversation object that is mutable
 
         Args:
@@ -14,6 +14,8 @@ class Conversation:
         """
         self.id = uuid4().hex
         self.messages = messages
+        self.summary = summary
+        self.topics = topics
 
         # cluster messages
         for i, message in enumerate(self.messages):
@@ -70,3 +72,9 @@ class Conversation:
 
     def get_text(self):
         return "\n".join(f"{message['user']}: {message['message']}" for message in self.messages)
+
+    @property
+    def json(self):
+        return [
+            {"role", "content"}
+        ]

@@ -4,7 +4,7 @@ import lzma
 from tqdm import tqdm
 from torch import set_default_device; set_default_device("cuda")
 from sentence_transformers.util import semantic_search
-from waifumem.models import llm_model, embedding_model
+from waifumem.models import llm_model, embedding_model, reranking_model
 from waifumem.conversation import Conversation
 
 
@@ -19,7 +19,7 @@ def get_summary(text: str) -> str:
     """
     return llm_model.create_chat_completion([
         {"role": "user", "content": f"You are a smart AI that summarizes conversations. Summarize the following conversation as briefly as possible, without mentioning anything unnecessary:\n{text}"}
-    ], temperature=0.3, stop="\n")["choices"][0]["message"]["content"]
+    ], temperature=0.3, stop="\n")["choices"][0]["message"]["content"].strip()
 
 
 def get_topics(text: str) -> str:
@@ -33,7 +33,7 @@ def get_topics(text: str) -> str:
     """
     return llm_model.create_chat_completion([
         {"role": "user", "content": f"You are a smart AI that finds the relevant topics of conversations. Return the topics of the conversation as briefly as possible, without mentioning anything unnecessary besides the topics:\n{text}"}
-    ], temperature=0.3, stop="\n")["choices"][0]["message"]["content"]
+    ], temperature=0.3, stop="\n")["choices"][0]["message"]["content"].strip()
 
 
 class Knowledge: # stores knowledge of the model? unsure rn
@@ -48,9 +48,11 @@ class WaifuMem:
         self.summary_embeddings = []
         self.topics = []
         self.topic_embeddings = []
-        self.settings = {
+        self.settings: dict[Literal["top_k_conv", "min_conv_score", "top_k_msg", "min_msg_score"], int | float] = {
+            "top_k_conv": 30,
             "min_conv_score": 0.25,
-            "min_msg_score": 0.3
+            "top_k_msg": 100,
+            "min_msg_score": 0.3,
         }
         for setting, value in kwargs.items():
             if setting in self.settings:
@@ -61,18 +63,18 @@ class WaifuMem:
 
     def remember(self, conversation: Conversation):
         # summarize conversation
-        summary = get_summary(conversation.get_text())
+        summary = conversation.summary or get_summary(conversation.get_text())
         self.summaries.append(summary)
         # embed conversation
         self.summary_embeddings.append(embedding_model.encode(summary, convert_to_tensor=True))
 
         # get topics of conversation
-        topics = get_topics(conversation.get_text())
+        topics = conversation.topics or get_topics(conversation.get_text())
         self.topics.append(topics)
         # embed conversation
         self.topic_embeddings.append(embedding_model.encode(topics, convert_to_tensor=True))
 
-    def search_conversation(self, message_embedding, conversation_id: str) -> list[dict[Literal["message", "user", "timestamp"], str | float]]:
+    def search_conversation(self, message_embedding, conversation_id: str) -> list[tuple[dict[Literal["message", "user", "timestamp"], str | float], float]]:
         """Semantically searches for relevant messages in a Conversation
 
         Args:
@@ -90,7 +92,7 @@ class WaifuMem:
                 conversation.messages[result["corpus_id"]],
                 result["score"]
             ) for result in results if result["score"] > self.settings["min_msg_score"]
-        ], reverse=True, key=lambda x: x[1])
+        ], reverse=True, key=lambda x: x[1])[:self.settings["top_k_msg"]]
 
     def search_messages(self):
         # search all messages in all conversations
@@ -99,7 +101,7 @@ class WaifuMem:
     def search_knowledge(self):
         pass
 
-    def search(self, text: str):
+    def search(self, text: str, top_k: int = 30):
         query = embedding_model.encode(text, prompt_name="query")
 
         # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)
@@ -107,15 +109,22 @@ class WaifuMem:
         # find relevant conversations by topics (adjust to similarity search based on current conversation's topics?)
         topic_results = semantic_search(query, self.topic_embeddings)[0]
 
-        conversation_ids = set([
+        combined_results = [
             (self.conversations[result["corpus_id"]].id, result["score"]) for result in summary_results
         ] + [
             (self.conversations[result["corpus_id"]].id, result["score"]) for result in topic_results
-        ])
+        ]
+        conversation_ids = set()
+        conversations = []
+        for conv_id, score in combined_results:
+            if conv_id not in conversation_ids:
+                conversations.append((conv_id, score))
+                conversation_ids.add(conv_id)
 
+        # filter and sort
         conversations = sorted([
-            conv for conv in conversation_ids if conv[1] > self.settings["min_conv_score"]
-        ], reverse=True, key=lambda x: x[1])
+            conv for conv in conversations if conv[1] > self.settings["min_conv_score"]
+        ], reverse=True, key=lambda x: x[1])[:self.settings["top_k_conv"]]
 
         results = []
 
@@ -125,8 +134,11 @@ class WaifuMem:
             results.extend(self.search_conversation(query, conversation.id))
 
         # re-rank results
+        scores = reranking_model.predict([
+            [text, message[0]["message"]] for message in results
+        ], convert_to_numpy=False)
 
-        return conversations
+        return [result[0] for result in sorted(zip(results, scores), reverse=True, key=lambda x: x[1])][:top_k]
 
     def save(self, path: str):
         with lzma.open(path, "wb") as f:

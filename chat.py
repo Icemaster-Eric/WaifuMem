@@ -1,4 +1,5 @@
 from llama_cpp import Llama
+from waifumem import WaifuMem, Conversation
 
 
 llm_model = Llama(
@@ -26,6 +27,10 @@ while True:
 
     if cmd == "r": # restart
         history.clear()
+
+    elif cmd == "s": # save conversation
+        pass
+
     elif cmd.split()[0] == "temp": # change temp
         temp = float(cmd.split()[-1])
     else:

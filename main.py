@@ -11,17 +11,17 @@ def main():
                 "timestamp": int(m.split()[-1]),
             } for m in f.readlines()
         ]
+    
+    with open("summaries.json", "r") as f:
+        summaries = json.load(f)
+    with open("topics.json", "r") as f:
+        topics = json.load(f)
 
-    conversations = [Conversation(m) for m in zip(*[iter(messages)]*20)]
+    conversations = [Conversation(m, summary=summaries[i], topics=topics[i]) for i, m in enumerate(zip(*[iter(messages)]*20))]
 
     waifumem = WaifuMem(conversations)
 
-    with open("summaries.json", "w") as f:
-        json.dump(waifumem.summaries, f)
-    with open("topics.json", "w") as f:
-        json.dump(waifumem.topics, f)
-
-    print(waifumem.search("Best healer"))
+    print(waifumem.search("How much money does Zhongli have?", top_k=10))
 
     waifumem.save("mem.xz")
 
