@@ -26,5 +26,12 @@ def main():
     waifumem.save("mem.xz")
 
 
+def test():
+    waifumem = WaifuMem.load("mem.xz")
+    print(waifumem.conversations[0].messages)
+
+    print(waifumem.search("Real name"))
+
+
 if __name__ == "__main__":
-    main()
+    test()

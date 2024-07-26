@@ -10,7 +10,7 @@ class Conversation:
         """Creates a conversation object that is mutable
 
         Args:
-            messages (list[dict] | None, optional): List of message objects with message (str), user (str) and timestamp (int, epoch seconds) keys. Defaults to None.
+            messages (list[dict] | None, optional): List of message objects with message (str, should be in the format `{user}: {message}`), user (str) and timestamp (int, epoch seconds) keys. Defaults to None.
         """
         self.id = uuid4().hex
         self.messages = messages
@@ -37,13 +37,13 @@ class Conversation:
         else:
             self.message_embeddings = []
 
-    def add_message(self, message: str, user: str, timestamp: float | None):
+    def add_message(self, message: str, user: str, timestamp: float | None = None):
         # cluster message
         if self.messages:
-            if message["user"] == self.messages[-1]["user"]:
-                if message["timestamp"] - self.messages[-1]["timestamp"] > 120:
-                    self.messages[-1] += "\n" + message["message"]
-                    self.messages[-1]["timestamp"] = message["timestamp"]
+            if user == self.messages[-1]["user"]:
+                if timestamp - self.messages[-1]["timestamp"] > 120:
+                    self.messages[-1] += "\n" + message
+                    self.messages[-1]["timestamp"] = timestamp
                     return
 
         self.messages.append({
@@ -71,10 +71,4 @@ class Conversation:
         return conversation
 
     def get_text(self):
-        return "\n".join(f"{message['user']}: {message['message']}" for message in self.messages)
-
-    @property
-    def json(self):
-        return [
-            {"role", "content"}
-        ]
+        return "\n".join(f"{message['message']}" for message in self.messages)
