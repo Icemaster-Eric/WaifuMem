@@ -21,9 +21,9 @@ def main():
 
     waifumem = WaifuMem(conversations)
 
-    print(waifumem.search("How much money does Zhongli have?", top_k=10))
+    print(waifumem.search("How much money does Zhongli have?", top_k=2))
 
-    waifumem.save("mem.xz")
+    #waifumem.save("mem.xz")
 
 
 def test():
@@ -34,8 +34,8 @@ def test():
     while True:
         query = input("|> ")
 
-        print(waifumem.search(query))
+        print(waifumem.search(query, top_k=3))
 
 
 if __name__ == "__main__":
-    test()
+    main()

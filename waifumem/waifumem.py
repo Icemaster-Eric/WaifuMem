@@ -43,7 +43,7 @@ class Knowledge: # stores knowledge of the model? unsure rn
 
 class WaifuMem:
     def __init__(self, conversations: list[Conversation] = [], **kwargs):
-        self.conversations = conversations
+        self.conversations = []
         self.summaries = []
         self.summary_embeddings = []
         self.topics = []
@@ -63,7 +63,6 @@ class WaifuMem:
 
     def remember(self, conversation: Conversation):
         self.conversations.append(conversation)
-
         return # no need for conversation searches right now, I can use it in the future for searching conversations from a long time ago
 
         # summarize conversation
@@ -78,7 +77,7 @@ class WaifuMem:
         # embed conversation
         self.topic_embeddings.append(embedding_model.encode(topics, convert_to_tensor=True))
 
-    def search_conversation(self, message_embedding, conversation_id: str) -> list[tuple[dict[Literal["message", "user", "timestamp"], str | float], float]]:
+    def search_conversation(self, message_embedding, conversation_id: str) -> list[tuple[list[dict[Literal["message", "user", "timestamp"], str | float]], float]]:
         """Semantically searches for relevant messages in a Conversation with large context searches
 
         Args:
@@ -93,7 +92,7 @@ class WaifuMem:
 
         return sorted([
             (
-                conversation.messages[result["corpus_id"]],
+                conversation.messages_ctx[result["corpus_id"]],
                 result["score"]
             ) for result in results if result["score"] > self.settings["min_msg_score"]
         ], reverse=True, key=lambda x: x[1])[:self.settings["top_k_msg"]]
@@ -112,20 +111,23 @@ class WaifuMem:
 
         query = embedding_model.encode(text, prompt_name="query")
 
-        results = []
+        results: list[tuple[list[dict[Literal["message", "user", "timestamp"], str | float]], float]] = []
 
         for conversation in self.conversations:
-            results.extend(
-                [(
-                    result["corpus_id"],
-                    result["score"]
-                ) for result in semantic_search(query, conversation.message_ctx_embeddings)[0]]
-            )
+            results.extend(self.search_conversation(query, conversation.id))
 
         results.sort(key=lambda x: x[1], reverse=True)
 
+        scores = reranking_model.predict([
+            [text, "\n".join(f"{m['user']}: {m['message']}" for m in result[0])] for result in results
+        ])
+
         # no need to do conversation searches, just do a search on all message triplets
-        return results[:top_k]
+        return [
+            (result[0], score) for result, score in sorted(
+                zip(results, scores), reverse=True, key=lambda x: x[1]
+            )
+        ][:top_k]
 
         if self.summary_embeddings:
             # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)

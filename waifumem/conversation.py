@@ -37,7 +37,7 @@ class Conversation:
                 # horrifyingly disgusting code, but I think it works (add timestamp later?)
                 if i == 0:
                     self.message_ctx_embeddings.append(f"{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
-                elif i - 1 == len(self.messages):
+                elif i == len(self.messages) - 1:
                     self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}")
                 else:
                     self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
@@ -80,6 +80,21 @@ class Conversation:
         self.message_ctx_embeddings = self.message_ctx_embeddings[split:]
 
         return conversation
+
+    @property
+    def messages_ctx(self) -> list[list[dict[Literal["message", "user", "timestamp"], str | float]]]:
+        messages = []
+
+        for i, message in enumerate(self.messages):
+            # horrifyingly disgusting code, but I think it works (add timestamp later?)
+            if i == 0:
+                messages.append([message, self.messages[i + 1]])
+            elif i == len(self.messages) - 1:
+                messages.append([self.messages[i - 1], message])
+            else:
+                messages.append([self.messages[i - 1], message, self.messages[i + 1]])
+
+        return messages
 
     def get_text(self):
         return "\n".join(f"{message['user']}: {message['message']}" for message in self.messages)
