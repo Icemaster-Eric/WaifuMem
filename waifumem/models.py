@@ -7,8 +7,7 @@ llm_model = Llama(
     chat_format="gemma",
     n_ctx=8192,
     n_gpu_layers=-1,
-    use_mmap=False,
-    verbose=False
+    verbose=False,
 )
 embedding_model = SentenceTransformer("Snowflake/snowflake-arctic-embed-m-long")
 reranking_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")

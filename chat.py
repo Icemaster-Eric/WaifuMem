@@ -11,7 +11,7 @@ Hey Raine, it's me, your creator. This will probably be the first message that y
 
 
 history = []
-temp = 0.8
+top_p = 0.8
 username = "Eric"
 memory = WaifuMem()
 conversation = Conversation()
@@ -28,7 +28,7 @@ while True:
         })
 
         output = ""
-        for token in llm_model.create_chat_completion(history, temperature=temp, stream=True):
+        for token in llm_model.create_chat_completion(history, top_p=top_p, repeat_penalty=1.1, stream=True):
             content = token["choices"][0]["delta"].get("content")
             if content is None:
                 continue
@@ -48,8 +48,6 @@ while True:
     elif cmd == "s": # save waifumem
         memory.save("mem.xz")
 
-    elif cmd.split()[0] == "temp": # change temp
-        temp = float(cmd.split()[-1])
     else:
         history.append({
             "role": "user",
@@ -70,7 +68,7 @@ while True:
             json.dump(llm_input, f, indent=1)
 
         output = ""
-        for token in llm_model.create_chat_completion(llm_input, temperature=temp, stream=True):
+        for token in llm_model.create_chat_completion(llm_input, top_p=top_p, repeat_penalty=1.1, stream=True):
             content = token["choices"][0]["delta"].get("content")
             if content is None:
                 continue

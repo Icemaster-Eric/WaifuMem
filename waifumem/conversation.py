@@ -29,23 +29,20 @@ class Conversation:
                 self.messages[i - 1]["message"] += "\n" + message["message"]
                 self.messages[i - 1]["timestamp"] = message["timestamp"]
                 self.messages.remove(message)
-        
-        self.message_embeddings = []
+
         self.message_ctx_embeddings = [] # 3 messages embedded at once
 
         if self.messages:
-            self.message_embeddings = embedding_model.encode([
-                f"{message['user']}: {message['message']}" for message in self.messages # convert timestamp to human-readable format and include here later (?)
-            ], convert_to_tensor=True)
-
             for i, message in enumerate(self.messages):
-                # horrifyingly disgusting code, but I think it works
+                # horrifyingly disgusting code, but I think it works (add timestamp later?)
                 if i == 0:
                     self.message_ctx_embeddings.append(f"{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
                 elif i - 1 == len(self.messages):
                     self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}")
                 else:
                     self.message_ctx_embeddings.append(f"{self.messages[i - 1]['user']}: {self.messages[i - 1]['message']}\n{message['user']}: {message['message']}\n{self.messages[i + 1]['user']}: {self.messages[i + 1]['message']}")
+
+            self.message_ctx_embeddings = embedding_model.encode(self.message_ctx_embeddings, convert_to_tensor=True)
 
     def add_message(self, message: str, user: str, timestamp: float | None = None):
         # cluster message
@@ -62,7 +59,7 @@ class Conversation:
             "timestamp": timestamp or time.time()
         })
 
-        self.message_embeddings.append(embedding_model.encode(self.messages[-1]["message"], convert_to_tensor=True))
+        self.message_ctx_embeddings.append(embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True))
 
     def cut(self, ratio: float = 0.5) -> "Conversation":
         """Cuts the `.messages` list by the ratio and returns a Conversation object with the former slice of the `.messages` list.
@@ -77,10 +74,10 @@ class Conversation:
         split = int(len(self.messages) * ratio)
 
         conversation.messages = self.messages[:split]
-        conversation.message_embeddings = self.message_embeddings[:split]
+        conversation.message_ctx_embeddings = self.message_ctx_embeddings[:split]
 
         self.messages = self.messages[split:]
-        self.message_embeddings = self.message_embeddings[split:]
+        self.message_ctx_embeddings = self.message_ctx_embeddings[split:]
 
         return conversation
 

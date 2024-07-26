@@ -64,6 +64,8 @@ class WaifuMem:
     def remember(self, conversation: Conversation):
         self.conversations.append(conversation)
 
+        return # no need for conversation searches right now, I can use it in the future for searching conversations from a long time ago
+
         # summarize conversation
         summary = conversation.summary or get_summary(conversation.get_text())
         self.summaries.append(summary)
@@ -87,7 +89,7 @@ class WaifuMem:
         """
         conversation = next(conv for conv in self.conversations if conv.id == conversation_id)
 
-        results = semantic_search(message_embedding, conversation.message_embeddings)[0]
+        results = semantic_search(message_embedding, conversation.message_ctx_embeddings)[0]
 
         return sorted([
             (
@@ -101,6 +103,7 @@ class WaifuMem:
         pass
 
     def search_knowledge(self):
+        # simply use the reranker
         pass
 
     def search(self, text: str, top_k: int = 30) -> list[tuple[dict[Literal["message", "user", "timestamp"], str | float], float]]:
@@ -108,6 +111,21 @@ class WaifuMem:
             return []
 
         query = embedding_model.encode(text, prompt_name="query")
+
+        results = []
+
+        for conversation in self.conversations:
+            results.extend(
+                [(
+                    result["corpus_id"],
+                    result["score"]
+                ) for result in semantic_search(query, conversation.message_ctx_embeddings)[0]]
+            )
+
+        results.sort(key=lambda x: x[1], reverse=True)
+
+        # no need to do conversation searches, just do a search on all message triplets
+        return results[:top_k]
 
         if self.summary_embeddings:
             # find relevant conversations by summary (adjust to similarity search based on current conversation's summary?)
