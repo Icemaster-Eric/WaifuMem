@@ -11,7 +11,7 @@ def main():
                 "timestamp": int(m.split()[-1]),
             } for m in f.readlines()
         ]
-    
+
     with open("summaries.json", "r") as f:
         summaries = json.load(f)
     with open("topics.json", "r") as f:
@@ -28,9 +28,13 @@ def main():
 
 def test():
     waifumem = WaifuMem.load("mem.xz")
+
     print(waifumem.conversations[0].messages)
 
-    print(waifumem.search("Real name"))
+    while True:
+        query = input("|> ")
+
+        print(waifumem.search(query))
 
 
 if __name__ == "__main__":

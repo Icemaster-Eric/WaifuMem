@@ -50,9 +50,9 @@ class WaifuMem:
         self.topic_embeddings = []
         self.settings: dict[Literal["top_k_conv", "min_conv_score", "top_k_msg", "min_msg_score"], int | float] = {
             "top_k_conv": 30,
-            "min_conv_score": 0.25,
+            "min_conv_score": 0.2,
             "top_k_msg": 100,
-            "min_msg_score": 0.3,
+            "min_msg_score": 0.25,
         }
         for setting, value in kwargs.items():
             if setting in self.settings:
@@ -62,6 +62,8 @@ class WaifuMem:
             self.remember(conversation)
 
     def remember(self, conversation: Conversation):
+        self.conversations.append(conversation)
+
         # summarize conversation
         summary = conversation.summary or get_summary(conversation.get_text())
         self.summaries.append(summary)
@@ -114,6 +116,7 @@ class WaifuMem:
         ] + [
             (self.conversations[result["corpus_id"]].id, result["score"]) for result in topic_results
         ]
+
         conversation_ids = set()
         conversations = []
         for conv_id, score in combined_results:
@@ -126,6 +129,9 @@ class WaifuMem:
             conv for conv in conversations if conv[1] > self.settings["min_conv_score"]
         ], reverse=True, key=lambda x: x[1])[:self.settings["top_k_conv"]]
 
+        if not conversations:
+            return []
+
         results = []
 
         for conv_id, score in conversations:
@@ -135,7 +141,7 @@ class WaifuMem:
 
         # re-rank results
         scores = reranking_model.predict([
-            [text, message[0]["message"]] for message in results
+            [text, f"{message[0]['user']}: {message[0]['message']}"] for message in results
         ], convert_to_numpy=False)
 
         return [result[0] for result in sorted(zip(results, scores), reverse=True, key=lambda x: x[1])][:top_k]

@@ -10,7 +10,7 @@ class Conversation:
         """Creates a conversation object that is mutable
 
         Args:
-            messages (list[dict] | None, optional): List of message objects with message (str, should be in the format `{user}: {message}`), user (str) and timestamp (int, epoch seconds) keys. Defaults to None.
+            messages (list[dict] | None, optional): List of message objects with message (str), user (str) and timestamp (int, epoch seconds) keys. Defaults to None.
         """
         self.id = uuid4().hex
         self.messages = messages
@@ -71,4 +71,4 @@ class Conversation:
         return conversation
 
     def get_text(self):
-        return "\n".join(f"{message['message']}" for message in self.messages)
+        return "\n".join(f"{message['user']}: {message['message']}" for message in self.messages)
