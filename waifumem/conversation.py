@@ -53,6 +53,9 @@ class Conversation:
                     self.messages[-1]["timestamp"] = timestamp
                     return
 
+        # give the previous message the full context
+        self.message_ctx_embeddings[-1] = embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{self.messages[-1]['user']}: {self.messages[-1]['message']}\n{user}: {message}", convert_to_tensor=True)
+
         self.messages.append({
             "message": message,
             "user": user,
