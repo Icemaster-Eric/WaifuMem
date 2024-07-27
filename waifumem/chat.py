@@ -1,19 +1,66 @@
-import sys, time
+import torch
 
 from exllamav2 import (
     ExLlamaV2,
     ExLlamaV2Config,
     ExLlamaV2Cache_Q4,
     ExLlamaV2Tokenizer,
-    model_init,
 )
-
-import torch
 
 from exllamav2.generator import (
     ExLlamaV2StreamingGenerator,
     ExLlamaV2Sampler
 )
+
+
+class Llama:
+    def __init__(self, model_dir: str, prompt_format):
+        config = ExLlamaV2Config(model_dir)
+        model = ExLlamaV2(config)
+        tokenizer = ExLlamaV2Tokenizer(config)
+
+        cache = ExLlamaV2Cache_Q4(model, lazy = not model.loaded)
+
+        generator = ExLlamaV2StreamingGenerator(model, cache, tokenizer)
+
+        settings = ExLlamaV2Sampler.Settings(
+            temperature = 0.95, # Sampler temperature (1 to disable)
+            top_k = 50, # Sampler top-K (0 to disable)
+            top_p = 0.8, # Sampler top-P (0 to disable)
+            top_a = 0.0, # Sampler top-A (0 to disable)
+            typical = 0.0, # Sampler typical threshold (0 to disable)
+            skew = 0.0, # Skew sampling (0 to disable)
+            token_repetition_penalty = 1.01, # Sampler repetition penalty (1 to disable)
+            token_frequency_penalty = 0.0, # Sampler frequency penalty (0 to disable)
+            token_presence_penalty = 0.0, # Sampler presence penalty (0 to disable)
+            smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
+        )
+
+    def chat_completion(self, ) -> str:
+        pass
+
+    def get_tokenized_context(self, max_len):
+        global user_prompts, responses_ids
+
+        while True:
+            context = torch.empty((1, 0), dtype=torch.long)
+
+            for turn in range(len(user_prompts)):
+
+                up_text = format_prompt(user_prompts[turn], context.shape[-1] == 0)
+                up_ids = encode_prompt(up_text)
+                context = torch.cat([context, up_ids], dim=-1)
+
+                if turn < len(responses_ids):
+                    context = torch.cat([context, responses_ids[turn]], dim=-1)
+
+            if context.shape[-1] < max_len: return context
+
+            # If the context is too long, remove the first Q/A pair and try again. The system prompt will be moved to
+            # the first entry in the truncated context
+
+            user_prompts = user_prompts[1:]
+            responses_ids = responses_ids[1:]
 
 
 class PromptLlama3:
@@ -39,25 +86,19 @@ class PromptLlama3:
             """<|start_header_id|>assistant<|end_header_id|>"""
 
     def stop_conditions(self, tokenizer: ExLlamaV2Tokenizer):
-        return \
-            [tokenizer.eos_token_id,
-             tokenizer.single_id("<|eot_id|>"),
-             tokenizer.single_id("<|start_header_id|>")]
+        return [
+            tokenizer.eos_token_id,
+            tokenizer.single_id("<|eot_id|>"),
+            tokenizer.single_id("<|start_header_id|>")
+        ]
 
     def encoding_options(self):
         return False, False, True
-
-    def print_extra_newline(self):
-        return True
 
 
 username = "Eric"
 botname = "Raine"
 system_prompt = "You are Raine, a AI vtuber with a kuudere personality. You are a shy girl who doesn't like to talk very much. However, you still make sarcastic remarks and tease others sometimes. Never talk in third person. Never describe your actions. Always respond in first person as Raine. You are talking to Eric."
-
-if args.mode is None:
-    print(" ## Error: No mode specified.")
-    sys.exit()
 
 prompt_format = PromptLlama3()
 prompt_format.botname = botname
@@ -124,26 +165,19 @@ def get_tokenized_context(max_len):
 generator = ExLlamaV2StreamingGenerator(model, cache, tokenizer)
 
 settings = ExLlamaV2Sampler.Settings(
-    temperature = args.temperature,
-    top_k = args.top_k,
-    top_p = args.top_p,
-    top_a = args.top_a,
-    typical = args.typical,
-    skew = args.skew,
-    token_repetition_penalty = args.repetition_penalty,
-    token_frequency_penalty = args.frequency_penalty,
-    token_presence_penalty = args.presence_penalty,
-    smoothing_factor = args.smoothing_factor,
+    temperature = 0.95, # Sampler temperature (1 to disable)
+    top_k = 50, # Sampler top-K (0 to disable)
+    top_p = 0.8, # Sampler top-P (0 to disable)
+    top_a = 0.0, # Sampler top-A (0 to disable)
+    typical = 0.0, # Sampler typical threshold (0 to disable)
+    skew = 0.0, # Skew sampling (0 to disable)
+    token_repetition_penalty = 1.01, # Sampler repetition penalty (1 to disable)
+    token_frequency_penalty = 0.0, # Sampler frequency penalty (0 to disable)
+    token_presence_penalty = 0.0, # Sampler presence penalty (0 to disable)
+    smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
 )
 
-if args.dynamic_temperature:
-    dt_args = [float(alloc) for alloc in args.dynamic_temperature.split(",")]
-    settings.min_temp = dt_args[0]
-    settings.max_temp = dt_args[1]
-    settings.temp_exponent = dt_args[2]
-
-max_response_tokens = args.max_response_tokens
-min_space_in_context = args.response_chunk
+max_response_tokens = 500 # max tokens / response
 
 # Stop conditions
 
@@ -163,7 +197,7 @@ while True:
 
     # Send tokenized context to generator
 
-    active_context = get_tokenized_context(model.config.max_seq_len - min_space_in_context)
+    active_context = get_tokenized_context(model.config.max_seq_len)
     generator.begin_stream_ex(active_context, settings)
 
     # Stream response
@@ -187,8 +221,6 @@ while True:
 
         print(chunk, end = "")
 
-        sys.stdout.flush()
-
         # If response is too long, cut it short, and append EOS if that was a stop condition
 
         response_tokens += 1
@@ -204,8 +236,4 @@ while True:
         # EOS signal returned
 
         if eos:
-
-            if prompt_format.print_extra_newline():
-                print()
-
             break
