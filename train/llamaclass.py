@@ -30,19 +30,10 @@ generator = ExLlamaV2DynamicGenerator(
 
 # JSON schema
 
-class SuperheroAppearance(BaseModel):
-    title: str
-    issue_number: int
-    year: int
+class RememberMessage(BaseModel):
+    remember: bool
 
-class Superhero(BaseModel):
-    name: str
-    secret_identity: str
-    superpowers: conlist(str, max_length = 5)
-    first_appearance: SuperheroAppearance
-    gender: Literal["male", "female"]
-
-schema_parser = JsonSchemaParser(Superhero.schema())
+schema_parser = JsonSchemaParser(RememberMessage.schema())
 
 # Create prompts with and without filters
 
