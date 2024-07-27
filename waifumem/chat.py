@@ -13,8 +13,8 @@ from exllamav2.generator import (
 
 
 class Prompt:
-    def __init__(self):
-        pass
+    def __init__(self, system_prompt: str):
+        self.system_prompt = system_prompt
 
     def first_prompt(self):
         raise NotImplementedError
@@ -28,17 +28,15 @@ class Prompt:
     def encoding_options(self):
         raise NotImplementedError
 
-    def format(self, prompt: str, first: bool):
+    def format(self, prompt: str, role: str, first: bool):
         raise NotImplementedError
 
 
 class PromptLlama3(Prompt):
-    botname = "Chatbot"
-    username = "User"
     description = "Llama3-instruct models"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, system_prompt: str):
+        super().__init__(system_prompt)
 
     def first_prompt(self):
         return \
@@ -48,11 +46,18 @@ class PromptLlama3(Prompt):
             """<|user_prompt|><|eot_id|>""" + \
             """<|start_header_id|>assistant<|end_header_id|>"""
 
-    def subs_prompt(self):
-        return \
-            """<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n""" + \
-            """<|user_prompt|><|eot_id|>""" + \
-            """<|start_header_id|>assistant<|end_header_id|>"""
+    def subs_prompt(self, role: str):
+        if role == "user":
+            return \
+                """<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n""" + \
+                """<|prompt|><|eot_id|>""" + \
+                """<|start_header_id|>assistant<|end_header_id|>"""
+
+        elif role == "assistant":
+            return \
+                """<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n""" + \
+                """<|prompt|><|eot_id|>""" + \
+                """<|start_header_id|>user<|end_header_id|>"""
 
     def stop_conditions(self, tokenizer: ExLlamaV2Tokenizer):
         return [x for x in [
@@ -64,11 +69,11 @@ class PromptLlama3(Prompt):
     def encoding_options(self):
         return False, False, True
 
-    def format(self, prompt: str, first: bool):
+    def format(self, prompt: str, role: str, first: bool):
         if first:
-            return self.first_prompt().replace("<|system_prompt|>", system_prompt).replace("<|user_prompt|>", prompt)
+            return self.first_prompt().replace("<|system_prompt|>", self.system_prompt).replace("<|user_prompt|>", prompt)
         else:
-            return self.subs_prompt().replace("<|user_prompt|>", prompt)
+            return self.subs_prompt(role).replace("<|prompt|>", prompt)
 
 
 class Llama:
@@ -76,13 +81,20 @@ class Llama:
         self.config = ExLlamaV2Config(model_dir)
         self.model = ExLlamaV2(self.config)
         self.tokenizer = ExLlamaV2Tokenizer(self.config)
-        self.cache = ExLlamaV2Cache_Q4(self.model)
+        self.cache = ExLlamaV2Cache_Q4(self.model, lazy = not self.model.loaded)
         self.generator = ExLlamaV2StreamingGenerator(self.model, self.cache, self.tokenizer)
         self.prompt = prompt
         self.generator.set_stop_conditions(self.prompt.stop_conditions(self.tokenizer))
-        self.add_bos, self.add_eos, self.encode_special_tokens = prompt_format.encoding_options()
+        self.add_bos, self.add_eos, self.encode_special_tokens = prompt.encoding_options()
 
-    def chat_completion(self, history: list[dict[Literal["role", "content"], str]], settings: ExLlamaV2Sampler.Settings | None = None, stream: bool = False) -> str:
+    def chat_completion(
+            self,
+            history: list[dict[Literal["role", "content"], str]],
+            max_new_tokens: int = 100,
+            settings: ExLlamaV2Sampler.Settings | None = None,
+            stream: bool = False
+        ):
+        print("0")
         if settings is None:
             settings = ExLlamaV2Sampler.Settings(
                 temperature = 0.95, # Sampler temperature (1 to disable)
@@ -97,13 +109,11 @@ class Llama:
                 smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
             )
 
-        responses_ids = []
-
         context = torch.empty((1, 0), dtype=torch.long)
 
-        for i, message in enumerate(history):
-            up_text = self.prompt.format(message["content"], context.shape[-1] == 0)
-            up_ids = tokenizer.encode(
+        for message in history:
+            up_text = self.prompt.format(message["content"], message["role"], context.shape[-1] == 0)
+            up_ids = self.tokenizer.encode(
                 up_text,
                 add_bos=self.add_bos,
                 add_eos=self.add_eos,
@@ -111,43 +121,68 @@ class Llama:
             )
             context = torch.cat([context, up_ids], dim=-1)
 
-            if i < len(responses_ids):
-                context = torch.cat([context, responses_ids[i]], dim=-1)
+        print("1")
 
-        generator.begin_stream_ex(context, settings)
+        self.generator.begin_stream_ex(context, settings)
+
+        responses_ids = []
 
         # Stream response
         response_text = ""
         responses_ids.append(torch.empty((1, 0), dtype = torch.long))
 
-        for response_tokens in range(max_response_tokens):
-            res = generator.stream_ex()
+        print("2")
+
+        for response_tokens in range(max_new_tokens):
+            print("a")
+            res = self.generator.stream_ex()
+            print("b")
             chunk = res["chunk"]
             eos = res["eos"]
             tokens = res["chunk_token_ids"]
 
             if len(response_text) == 0:
                 chunk = chunk.lstrip()
+
             response_text += chunk
             responses_ids[-1] = torch.cat([responses_ids[-1], tokens], dim = -1)
 
-            print(chunk, end = "")
-
             if eos: # EOS signal returned
+                print("c")
                 break
 
             if stream:
+                print("d")
                 yield chunk
 
         else:
-            if tokenizer.eos_token_id in generator.stop_tokens:
-                responses_ids[-1] = torch.cat([responses_ids[-1], tokenizer.single_token(tokenizer.eos_token_id)], dim=-1)
+            print("e")
+            pass
+            #if self.tokenizer.eos_token_id in self.generator.stop_tokens:
+            #    responses_ids[-1] = torch.cat([responses_ids[-1], self.tokenizer.single_token(self.tokenizer.eos_token_id)], dim=-1)
 
         if not stream:
+            print("f")
             return response_text
 
 
-username = "Eric"
+if __name__ == "__main__":
+    system_prompt = (
+        "You are Raine, a AI vtuber with a kuudere personality. You are a shy girl who doesn't like to talk very much."
+        "However, you still make sarcastic remarks and tease others sometimes. Never talk in third person."
+        "Never describe your actions. Always respond in first person as Raine. You are talking to Eric."
+    )
+
+    llama = Llama("waifumem/models/llama-3.1-8b-instruct-exl2", PromptLlama3(system_prompt))
+
+    for chunk in llama.chat_completion([
+        {"role": "user", "content": "Hey Raine, it's me"}
+    ]):
+        print(chunk, end="")
+    print()
+
+
+"""username = "Eric"
 botname = "Raine"
 system_prompt = "You are Raine, a AI vtuber with a kuudere personality. You are a shy girl who doesn't like to talk very much. However, you still make sarcastic remarks and tease others sometimes. Never talk in third person. Never describe your actions. Always respond in first person as Raine. You are talking to Eric."
 
@@ -287,4 +322,4 @@ while True:
         # EOS signal returned
 
         if eos:
-            break
+            break"""
