@@ -55,22 +55,20 @@ class PromptLlama3(Prompt):
             """<|start_header_id|>assistant<|end_header_id|>"""
 
     def stop_conditions(self, tokenizer: ExLlamaV2Tokenizer):
-        return [
+        return [x for x in [
             tokenizer.eos_token_id,
             tokenizer.single_id("<|eot_id|>"),
             tokenizer.single_id("<|start_header_id|>")
-        ]
+        ] if x]
 
     def encoding_options(self):
         return False, False, True
 
     def format(self, prompt: str, first: bool):
-        global system_prompt, prompt_format
-
         if first:
-            return prompt_format.first_prompt().replace("<|system_prompt|>", system_prompt).replace("<|user_prompt|>", prompt)
+            return self.first_prompt().replace("<|system_prompt|>", system_prompt).replace("<|user_prompt|>", prompt)
         else:
-            return prompt_format.subs_prompt().replace("<|user_prompt|>", prompt)
+            return self.subs_prompt().replace("<|user_prompt|>", prompt)
 
 
 class Llama:
@@ -81,6 +79,8 @@ class Llama:
         self.cache = ExLlamaV2Cache_Q4(self.model)
         self.generator = ExLlamaV2StreamingGenerator(self.model, self.cache, self.tokenizer)
         self.prompt = prompt
+        self.generator.set_stop_conditions(self.prompt.stop_conditions(self.tokenizer))
+        self.add_bos, self.add_eos, self.encode_special_tokens = prompt_format.encoding_options()
 
     def chat_completion(self, history: list[dict[Literal["role", "content"], str]], settings: ExLlamaV2Sampler.Settings | None = None, stream: bool = False) -> str:
         if settings is None:
@@ -97,30 +97,54 @@ class Llama:
                 smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
             )
 
-        pass
+        responses_ids = []
 
-    def get_tokenized_context(self, max_len):
-        global user_prompts, responses_ids
+        context = torch.empty((1, 0), dtype=torch.long)
 
-        while True:
-            context = torch.empty((1, 0), dtype=torch.long)
+        for i, message in enumerate(history):
+            up_text = self.prompt.format(message["content"], context.shape[-1] == 0)
+            up_ids = tokenizer.encode(
+                up_text,
+                add_bos=self.add_bos,
+                add_eos=self.add_eos,
+                encode_special_tokens=self.encode_special_tokens
+            )
+            context = torch.cat([context, up_ids], dim=-1)
 
-            for turn in range(len(user_prompts)):
+            if i < len(responses_ids):
+                context = torch.cat([context, responses_ids[i]], dim=-1)
 
-                up_text = format_prompt(user_prompts[turn], context.shape[-1] == 0)
-                up_ids = encode_prompt(up_text)
-                context = torch.cat([context, up_ids], dim=-1)
+        generator.begin_stream_ex(context, settings)
 
-                if turn < len(responses_ids):
-                    context = torch.cat([context, responses_ids[turn]], dim=-1)
+        # Stream response
+        response_text = ""
+        responses_ids.append(torch.empty((1, 0), dtype = torch.long))
 
-            if context.shape[-1] < max_len: return context
+        for response_tokens in range(max_response_tokens):
+            res = generator.stream_ex()
+            chunk = res["chunk"]
+            eos = res["eos"]
+            tokens = res["chunk_token_ids"]
 
-            # If the context is too long, remove the first Q/A pair and try again. The system prompt will be moved to
-            # the first entry in the truncated context
+            if len(response_text) == 0:
+                chunk = chunk.lstrip()
+            response_text += chunk
+            responses_ids[-1] = torch.cat([responses_ids[-1], tokens], dim = -1)
 
-            user_prompts = user_prompts[1:]
-            responses_ids = responses_ids[1:]
+            print(chunk, end = "")
+
+            if eos: # EOS signal returned
+                break
+
+            if stream:
+                yield chunk
+
+        else:
+            if tokenizer.eos_token_id in generator.stop_tokens:
+                responses_ids[-1] = torch.cat([responses_ids[-1], tokenizer.single_token(tokenizer.eos_token_id)], dim=-1)
+
+        if not stream:
+            return response_text
 
 
 username = "Eric"
