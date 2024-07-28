@@ -2,7 +2,6 @@ from typing import Literal
 import pickle
 import lzma
 from tqdm import tqdm
-from torch import set_default_device; set_default_device("cuda")
 from sentence_transformers.util import semantic_search
 from waifumem.models import llm_model, embedding_model, reranking_model
 from waifumem.conversation import Conversation

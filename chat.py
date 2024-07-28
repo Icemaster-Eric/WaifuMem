@@ -1,4 +1,4 @@
-from waifumem import WaifuMem, Conversation
+from waifumem import WaifuMem, Conversation, prompts
 from waifumem.models import llm_model
 import json # for debugging
 
@@ -23,17 +23,17 @@ while True:
     if cmd[:2] == "r ": # restart
         history.clear()
         history.append({
-            "role": "user",
+            "role": "system",
             "content": f"{cmd[2:]}"
         })
 
         output = ""
-        for token in llm_model.create_chat_completion(history, top_p=top_p, repeat_penalty=1.1, stream=True):
-            content = token["choices"][0]["delta"].get("content")
-            if content is None:
+        print(prompts.llama3(history))
+        for chunk in llm_model.generate_stream(prompts.llama3(history)):
+            if not chunk:
                 continue
-            output += content
-            print(content, end="")
+            output += chunk
+            print(chunk, end="")
         print()
 
         history.append({
@@ -68,12 +68,11 @@ while True:
             json.dump(llm_input, f, indent=1)
 
         output = ""
-        for token in llm_model.create_chat_completion(llm_input, top_p=top_p, repeat_penalty=1.1, stream=True):
-            content = token["choices"][0]["delta"].get("content")
-            if content is None:
+        for chunk in llm_model.generate_stream(prompts.llama3(history)):
+            if not chunk:
                 continue
-            output += content
-            print(content, end="")
+            output += chunk
+            print(chunk, end="")
         print()
 
         output = output.strip()

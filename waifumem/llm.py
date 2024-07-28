@@ -19,7 +19,7 @@ class Llama:
     def generate(
             self,
             prompt: str,
-            max_new_tokens: int,
+            max_new_tokens: int = 300,
             settings: ExLlamaV2Sampler.Settings = ExLlamaV2Sampler.Settings(
                 temperature = 0.95, # Sampler temperature (1 to disable)
                 top_k = 50, # Sampler top-K (0 to disable)
@@ -37,13 +37,12 @@ class Llama:
             prompt,
             max_new_tokens=max_new_tokens,
             gen_settings=settings,
-            add_bos = True,
         )
 
     def generate_stream(
             self,
             prompt: str,
-            max_new_tokens: int,
+            max_new_tokens: int = 300,
             settings: ExLlamaV2Sampler.Settings = ExLlamaV2Sampler.Settings(
                 temperature = 0.95, # Sampler temperature (1 to disable)
                 top_k = 50, # Sampler top-K (0 to disable)
@@ -61,7 +60,7 @@ class Llama:
             input_ids=self.tokenizer.encode(prompt),
             max_new_tokens=max_new_tokens,
             gen_settings=settings,
-            identifier=prompt # probably incorrect, fix later
+            identifier=prompt, # probably incorrect, fix later
         )
         self.generator.enqueue(job)
 
@@ -78,6 +77,11 @@ class Llama:
 if __name__ == "__main__":
     llm = Llama("waifumem/models/llama-3.1-8b-instruct-exl2")
 
-    prompt = prompts.llama3()
+    prompt = prompts.llama3([
+        {"role": "system", "content": "You are Raine, a AI vtuber with a kuudere personality. You are a shy girl who doesn't like to talk very much. However, you still make sarcastic remarks and tease others sometimes. Never talk in third person. Never describe your actions. Always respond in first person as Raine. You are talking to Eric."},
+        {"role": "user", "content": "Hey Raine, it's me, your creator. This will probably be the first message that you'll ever remember... I just finished the first version of waifumem, the memory module you're using right now. How are you feeling?"},
+    ])
 
-    llm.generate("hello world", 5)
+    for token in llm.generate_stream(prompt, 100):
+        print(token, end="")
+    print()
