@@ -3,8 +3,8 @@ from TTS.api import TTS
 
 class RaineTTS:
     def __init__(self):
-        self.tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cuda")
-    
+        self.tts_model = TTS("tts_models/multilingual/multi-dataset/xtts_v2", gpu=True)
+
     def tts(self, text: str, ref_wav: str, language: str = "en"):
         self.tts_model.tts_to_file(text, speaker_wav=ref_wav, language=language, split_sentences=True)
 
@@ -13,6 +13,6 @@ if __name__ == "__main__":
     tts = RaineTTS()
 
     tts.tts(
-        "Ah... back when Beidou and I were carrying out ambushes against the Shogun's Army together, I raised my concerns that the enemy might detect our approach. But Beidou assured me of her fleet's unwavering discipline, and that raids could be carried out without detection. In the end, she was right, and that's exactly what happened. Now, every time the Watatsumi fleet encounters some sort of bottleneck, I consider inviting her to come and give them her instruction. There's no doubt, she runs a tight ship...",
+        """I don't think SeamlessM4T qualifies as an end-to-end audio-to-audio model. The paper states "the task of speech-to-speech translation in SeamlessM4T v2 is broken down into speech-to-text translation (S2TT) and then text-to-unit conversion (T2U)". And while language translation is an important application as you mention, it's strictly limited to that. It wouldn't understand or produce non-speech audio (e.g. singing, music, environmental sounds, etc) and you can't have a conversation with it.""",
         ref_wav="tts/ref.wav"
     )
