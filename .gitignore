@@ -160,3 +160,4 @@ waifumem/data/*
 *.xz
 chat_history.json
 *.gguf
+tts/models/*
