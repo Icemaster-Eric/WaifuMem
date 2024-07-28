@@ -1,5 +1,5 @@
 import json
-from waifumem import WaifuMem, Conversation
+"""from waifumem import WaifuMem, Conversation
 
 
 def main():
@@ -34,8 +34,16 @@ def test():
     while True:
         query = input("|> ")
 
-        print(waifumem.search(query, top_k=3))
+        print(waifumem.search(query, top_k=3))"""
+
+from tts import RaineTTS
+
+
+def tts_test():
+    raine_tts = RaineTTS()
+
+    raine_tts.tts("Yoh, now why might you be looking for me, hm? Oh, you didn't know? I'm the 77th Director of the Wangsheng Funeral Parlor, Hu Tao. Though by the looks of you... Radiant glow, healthy posture... Yes, you're definitely here for something other than that which falls within my regular line of work, aren't you?")
 
 
 if __name__ == "__main__":
-    main()
+    tts_test()
