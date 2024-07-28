@@ -53,16 +53,24 @@ class Conversation:
                     self.messages[-1]["timestamp"] = timestamp
                     return
 
-        # give the previous message the full context
-        self.message_ctx_embeddings[-1] = embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{self.messages[-1]['user']}: {self.messages[-1]['message']}\n{user}: {message}", convert_to_tensor=True)
-
         self.messages.append({
             "message": message,
             "user": user,
             "timestamp": timestamp or time.time()
         })
 
-        self.message_ctx_embeddings.append(embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True))
+        match len(self.messages):
+            case 1:
+                self.message_ctx_embeddings.append(embedding_model.encode(f"{user}: {message}", convert_to_tensor=True))
+            case 2:
+                embedding = embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True)
+                # give the previous message the full context (in this case, it seems a bit weird because both messages have the same embedding, but whatever)
+                self.message_ctx_embeddings[-1] = embedding_model.encode(embedding)
+                self.message_ctx_embeddings.append(embedding)
+            case _:
+                # give the previous message the full context
+                self.message_ctx_embeddings[-1] = embedding_model.encode(f"{self.messages[-3]['user']}: {self.messages[-3]['message']}\n{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True)
+                self.message_ctx_embeddings.append(embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True))
 
     def cut(self, ratio: float = 0.5) -> "Conversation":
         """Cuts the `.messages` list by the ratio and returns a Conversation object with the former slice of the `.messages` list.

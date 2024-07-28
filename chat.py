@@ -28,8 +28,7 @@ while True:
         })
 
         output = ""
-        print(prompts.llama3(history))
-        for chunk in llm_model.generate_stream(prompts.llama3(history)):
+        for chunk in llm_model.generate_stream(prompts.Llama3(history, llm_model.tokenizer)):
             if not chunk:
                 continue
             output += chunk
@@ -68,7 +67,7 @@ while True:
             json.dump(llm_input, f, indent=1)
 
         output = ""
-        for chunk in llm_model.generate_stream(prompts.llama3(history)):
+        for chunk in llm_model.generate_stream(prompts.Llama3(history, llm_model.tokenizer)):
             if not chunk:
                 continue
             output += chunk

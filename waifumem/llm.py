@@ -18,7 +18,7 @@ class Llama:
 
     def generate(
             self,
-            prompt: str,
+            prompt: prompts.Prompt | str,
             max_new_tokens: int = 300,
             settings: ExLlamaV2Sampler.Settings = ExLlamaV2Sampler.Settings(
                 temperature = 0.95, # Sampler temperature (1 to disable)
@@ -33,15 +33,24 @@ class Llama:
                 smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
             ),
     ):
-        return self.generator.generate(
-            prompt,
-            max_new_tokens=max_new_tokens,
-            gen_settings=settings,
-        )
+        if isinstance(prompt, prompts.Prompt):
+            return self.generator.generate(
+                prompt.prompt,
+                max_new_tokens=max_new_tokens,
+                gen_settings=settings,
+                encode_special_tokens=prompt.encode_special_tokens,
+                add_bos=prompt.add_bos,
+            )
+        else:
+            return self.generator.generate(
+                prompt,
+                max_new_tokens=max_new_tokens,
+                gen_settings=settings,
+            )
 
     def generate_stream(
             self,
-            prompt: str,
+            prompt: prompts.Prompt | str,
             max_new_tokens: int = 300,
             settings: ExLlamaV2Sampler.Settings = ExLlamaV2Sampler.Settings(
                 temperature = 0.95, # Sampler temperature (1 to disable)
@@ -56,12 +65,26 @@ class Llama:
                 smoothing_factor = 0.0, # Smoothing Factor (0 to disable)
             ),
     ):
-        job = ExLlamaV2DynamicJob(
-            input_ids=self.tokenizer.encode(prompt),
-            max_new_tokens=max_new_tokens,
-            gen_settings=settings,
-            identifier=prompt, # probably incorrect, fix later
-        )
+        if isinstance(prompt, prompts.Prompt):
+            job = ExLlamaV2DynamicJob(
+                input_ids=self.tokenizer.encode(
+                    prompt.prompt,
+                    add_bos=prompt.add_bos,
+                    add_eos=prompt.add_eos,
+                    encode_special_tokens=prompt.encode_special_tokens
+                ),
+                max_new_tokens=max_new_tokens,
+                gen_settings=settings,
+                stop_conditions=prompt.stop_conditions,
+                identifier=prompt, # probably incorrect, fix later
+            )
+        else:
+            job = ExLlamaV2DynamicJob(
+                input_ids=self.tokenizer.encode(prompt),
+                max_new_tokens=max_new_tokens,
+                gen_settings=settings,
+                identifier=prompt, # probably incorrect, fix later
+            )
         self.generator.enqueue(job)
 
         while self.generator.num_remaining_jobs():
@@ -77,7 +100,7 @@ class Llama:
 if __name__ == "__main__":
     llm = Llama("waifumem/models/llama-3.1-8b-instruct-exl2")
 
-    prompt = prompts.llama3([
+    prompt = prompts.Llama3([
         {"role": "system", "content": "You are Raine, a AI vtuber with a kuudere personality. You are a shy girl who doesn't like to talk very much. However, you still make sarcastic remarks and tease others sometimes. Never talk in third person. Never describe your actions. Always respond in first person as Raine. You are talking to Eric."},
         {"role": "user", "content": "Hey Raine, it's me, your creator. This will probably be the first message that you'll ever remember... I just finished the first version of waifumem, the memory module you're using right now. How are you feeling?"},
     ])
