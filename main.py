@@ -42,7 +42,20 @@ from tts import RaineTTS
 def tts_test():
     raine_tts = RaineTTS()
 
-    raine_tts.tts("Coqui is a text-to-speech framework (vocoder and encoder), but cloning your own voice takes decades and offers no guarantee of better results. That's why we use RVC (Retrieval-Based Voice Conversion), which works only for speech-to-speech. You can train the model with just 2-3 minutes of dataset as it uses Hubert (a pre-trained model to fine-tune quickly and provide better results).")
+    raine_tts.tts("""We're no strangers to love.
+You know the rules and so do I.
+A full commitment's what I'm thinking of.
+You wouldn't get this from any other guy.""")
+
+
+def edge_tts_test():
+    import edge_tts
+
+    communicate = edge_tts.Communicate("Wanna come over for tea?", "en-US-AriaNeural")
+
+    for chunk in communicate.stream_sync():
+        if chunk["type"] == "WordBoundary":
+            pass
 
 
 if __name__ == "__main__":
