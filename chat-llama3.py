@@ -36,7 +36,7 @@ while True:
         print()
 
         history.append({
-            "role": "model",
+            "role": "assistant",
             "content": output
         })
 

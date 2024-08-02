@@ -1,5 +1,5 @@
 import json
-"""from waifumem import WaifuMem, Conversation
+from waifumem import WaifuMem, Conversation
 
 
 def main():
@@ -34,7 +34,7 @@ def test():
     while True:
         query = input("|> ")
 
-        print(waifumem.search(query, top_k=3))"""
+        print(waifumem.search(query, top_k=3))
 
 from tts import RaineTTS
 
@@ -59,4 +59,4 @@ def edge_tts_test():
 
 
 if __name__ == "__main__":
-    tts_test()
+    main()

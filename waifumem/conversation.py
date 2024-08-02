@@ -65,7 +65,7 @@ class Conversation:
             case 2:
                 embedding = embedding_model.encode(f"{self.messages[-2]['user']}: {self.messages[-2]['message']}\n{user}: {message}", convert_to_tensor=True)
                 # give the previous message the full context (in this case, it seems a bit weird because both messages have the same embedding, but whatever)
-                self.message_ctx_embeddings[-1] = embedding_model.encode(embedding)
+                self.message_ctx_embeddings[-1] = embedding
                 self.message_ctx_embeddings.append(embedding)
             case _:
                 # give the previous message the full context
