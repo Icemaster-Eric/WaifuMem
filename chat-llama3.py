@@ -77,7 +77,7 @@ while True:
         output = output.strip()
 
         history.append({
-            "role": "model",
+            "role": "assistant",
             "content": output
         })
         conversation.add_message(output, "Raine")

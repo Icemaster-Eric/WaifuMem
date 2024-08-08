@@ -129,6 +129,8 @@ class Gemma(Prompt):
                 f"{message['content']}<end_of_turn>\n"
             )
 
+        self.prompt += "<start_of_turn>model\n"
+
 
 if __name__ == "__main__":
     print(Gemma([
