@@ -161,4 +161,3 @@ waifumem/data/*
 chat_history.json
 *.gguf
 tts/models/*
-OpenVoice/

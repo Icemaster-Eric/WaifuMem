@@ -1,9 +1,13 @@
 import os
 import sounddevice as sd
+import torch
 from scipy.io.wavfile import write
 import soundfile as sf
 import numpy as np
 from pysbd import Segmenter
+from OpenVoice.openvoice import se_extractor
+from OpenVoice.openvoice.api import ToneColorConverter
+from edge_tts import Communicate
 from tts.rvc.infer.modules.vc.modules import VC
 from tts.rvc.configs.config import Config
 
@@ -21,11 +25,27 @@ class RaineTTS:
 
         self.segmenter = Segmenter()
 
-    def tts(self, text: str):
-        audio = []
+        self.tcc = ToneColorConverter("OpenVoice/openvoice/checkpoints/converter/config.json", device="cuda:0")
+        self.tcc.load_ckpt("OpenVoice/openvoice/checkpoints/converter/checkpoint.pth")
 
-        for sentence in self.segmenter.segment(text):
-            pass
+        self.source_se = torch.load(f'OpenVoice/openvoice/checkpoints/base_speakers/ses/en-us.pth', map_location="cuda:0")
+
+        self.target_se, audio_name = se_extractor.get_se(
+            "OpenVoice/resources/kokomi_ref.mp3",
+            self.tcc,
+            vad=False
+        )
+
+    def tts(self, text: str):
+        communicate = Communicate(text, "en-US-AriaNeural")
+        communicate.save_sync("output.mp3")
+
+        self.tcc.convert(
+            audio_src_path="output.mp3", 
+            src_se=self.source_se, 
+            tgt_se=self.target_se, 
+            output_path="tts-output.wav",
+            message="@MyShell")
 
         output = self.rvc_model.vc_single(
             0,
