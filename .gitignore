@@ -161,4 +161,4 @@ waifumem/data/*
 chat_history.json
 *.gguf
 tts/models/*
-StyleTTS2/*
+StyleTTS2

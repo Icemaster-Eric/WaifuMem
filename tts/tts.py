@@ -20,7 +20,7 @@ class RaineTTS:
         self.rvc_model.load_hubert("tts/models/hubert_base.pt")
 
     def tts(self, text: str):
-        tts_to_file(text, "output.wav", diffusion_steps=7, embedding_scale=1)
+        tts_to_file(text, "output.wav", diffusion_steps=7, embedding_scale=2)
 
         output = self.rvc_model.vc_single(
             0,

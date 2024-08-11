@@ -4,5 +4,5 @@ from tts import RaineTTS
 tts = RaineTTS()
 
 tts.tts(
-    "StyleTTS 2: Towards Human-Level Text-to-Speech through Style Diffusion and Adversarial Training with Large Speech Language Models"
+    """I'm great, thank you. This is my friend Emma. She is thinking about applying to this college. She has a few questions. Would you mind telling us about the process, please?"""
 )
