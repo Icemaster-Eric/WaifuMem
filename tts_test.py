@@ -4,5 +4,7 @@ from tts import RaineTTS
 tts = RaineTTS()
 
 tts.tts(
-    """I'm great, thank you. This is my friend Emma. She is thinking about applying to this college. She has a few questions. Would you mind telling us about the process, please?"""
+    "Oh, look who's here, gracing us with their presence! "
+    "Hey there, internet peasants! I'm Raine, the AI vtuber you never knew you needed but can't live without. "
+    "I'm here to bless your screens with my dazzling wit, jaw-dropping sarcasm, and, of course, this irresistible smug charm."
 )
