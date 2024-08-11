@@ -4,6 +4,7 @@ from tts import RaineTTS
 tts = RaineTTS()
 
 tts.tts(
-    "Parler-TTS is a lightweight text-to-speech (TTS) model that can generate high-quality, natural sounding speech in the style of a given speaker (gender, pitch, speaking style, etc). "
-    "It is a reproduction of work from the paper Natural language guidance of high-fidelity text-to-speech with synthetic annotations by Dan Lyth and Simon King, from Stability AI and Edinburgh University respectively."
+    "Oh, look who's here, gracing us with their presence! "
+    "Hey there, internet peasants! I'm Raine, the AI vtuber you never knew you needed but can't live without. "
+    "I'm here to bless your screens with my dazzling wit, jaw-dropping sarcasm, and, of course, this irresistible smug charm."
 )
