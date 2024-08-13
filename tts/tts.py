@@ -34,9 +34,9 @@ class RaineTTS:
             None,
             0,
             0.88,
-            0.33,
             0.5,
-            0.66
+            0.5,
+            0.33
         )
 
         write("rvc-output.wav", output[1][0], output[1][1])
@@ -44,7 +44,7 @@ class RaineTTS:
         #sd.play(output[1][1], output[1][0])
         #sd.wait()
 
-    def tts_directory(self, path: str):
+    def tts_directory(self, path: str, output_path: str):
         for i, fn in enumerate(os.listdir(path)):
             output = self.rvc_model.vc_single(
                 0,
@@ -56,9 +56,9 @@ class RaineTTS:
                 None,
                 0,
                 0.88,
-                0.33,
+                0.66,
                 0.5,
-                0.33
+                0.1
             )
 
-            write(f"{path}/{i}.wav", output[1][0], output[1][1])
+            write(f"{output_path}/{i}.wav", output[1][0], output[1][1])
